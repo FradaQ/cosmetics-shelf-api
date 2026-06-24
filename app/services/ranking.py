@@ -1,3 +1,6 @@
+import re
+import unicodedata
+
 from app.models import Confidence, ProductCandidate, ProductLookupRequest, ProductSource
 
 
@@ -12,8 +15,13 @@ class RankingService:
             if current is None or self._score(candidate, request) > self._score(current, request):
                 deduped[key] = candidate
 
+        candidates = list(deduped.values())
+        brand_matched = self._brand_matched_candidates(candidates, request)
+        if request.brand.strip():
+            candidates = brand_matched
+
         ranked = sorted(
-            deduped.values(),
+            candidates,
             key=lambda candidate: self._score(candidate, request),
             reverse=True,
         )
@@ -41,9 +49,21 @@ class RankingService:
         if candidate.productPageURL:
             score += 5
         if request.brand and candidate.brand:
-            if request.brand.lower() == candidate.brand.lower():
+            if _brand_matches(request.brand, candidate.brand):
                 score += 10
         return score
+
+    def _brand_matched_candidates(
+        self, candidates: list[ProductCandidate], request: ProductLookupRequest
+    ) -> list[ProductCandidate]:
+        requested_brand = request.brand.strip()
+        if not requested_brand:
+            return candidates
+        return [
+            candidate
+            for candidate in candidates
+            if candidate.brand and _brand_matches(requested_brand, candidate.brand)
+        ]
 
     def _confidence(self, score: int) -> Confidence:
         if score >= 75:
@@ -59,3 +79,19 @@ class RankingService:
             return f"url:{candidate.productPageURL}"
         return f"name:{candidate.brand.lower()}:{candidate.englishName.lower()}"
 
+
+def _brand_matches(requested_brand: str, candidate_brand: str) -> bool:
+    requested = _normalize_brand(requested_brand)
+    candidate = _normalize_brand(candidate_brand)
+    if not requested or not candidate:
+        return False
+    return requested == candidate or requested in candidate or candidate in requested
+
+
+def _normalize_brand(value: str) -> str:
+    without_accents = "".join(
+        character
+        for character in unicodedata.normalize("NFKD", value)
+        if not unicodedata.combining(character)
+    )
+    return re.sub(r"[^a-z0-9]+", "", without_accents.lower())

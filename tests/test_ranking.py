@@ -61,3 +61,26 @@ def test_ranking_deduplicates_barcode() -> None:
     assert len(ranked) == 1
     assert ranked[0].id == "stronger"
 
+
+def test_ranking_filters_non_matching_brands_when_brand_is_requested() -> None:
+    request = ProductLookupRequest(query="cleanser", brand="Lancome")
+    lancome_candidate = ProductCandidate(
+        id="lancome",
+        englishName="Creme Radiance Cleanser",
+        brand="Lancôme",
+        source=ProductSource.open_beauty_facts,
+        confidence=Confidence.low,
+        matchReasons=["brand match", "name match"],
+    )
+    other_candidate = ProductCandidate(
+        id="other",
+        englishName="Gentle Cleanser",
+        brand="Other Brand",
+        source=ProductSource.open_beauty_facts,
+        confidence=Confidence.low,
+        matchReasons=["name match"],
+    )
+
+    ranked = RankingService().rank([other_candidate, lancome_candidate], request)
+
+    assert [candidate.id for candidate in ranked] == ["lancome"]
