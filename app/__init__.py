@@ -1,0 +1,2 @@
+"""Cosmetics Shelf API package."""
+

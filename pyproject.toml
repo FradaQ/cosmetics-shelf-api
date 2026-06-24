@@ -1,0 +1,22 @@
+[project]
+name = "cosmetics-shelf-api"
+version = "0.1.0"
+description = "Lightweight product lookup API for the Cosmetics Shelf iOS app."
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.111,<1.0",
+    "httpx>=0.27,<1.0",
+    "pydantic-settings>=2.3,<3.0",
+    "uvicorn[standard]>=0.30,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2,<9.0",
+    "pytest-asyncio>=0.23,<1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["."]

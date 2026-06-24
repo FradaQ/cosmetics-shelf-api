@@ -1,0 +1,78 @@
+from urllib.parse import urlparse
+
+from app.config import Settings
+from app.models import Confidence, ProductCandidate, ProductLookupRequest, ProductSource
+from app.providers.page_metadata import parse_page_metadata
+from app.services.category import guess_category
+from app.services.ids import stable_id
+
+
+OFFICIAL_BRAND_DOMAINS: dict[str, tuple[str, ...]] = {
+    "lancome": ("lancome-usa.com", "lancome.com"),
+    "lancôme": ("lancome-usa.com", "lancome.com"),
+    "estee lauder": ("esteelauder.com",),
+    "estée lauder": ("esteelauder.com",),
+    "clinique": ("clinique.com",),
+    "kiehls": ("kiehls.com",),
+    "kiehl's": ("kiehls.com",),
+    "the ordinary": ("theordinary.com",),
+    "cerave": ("cerave.com",),
+}
+
+
+class OfficialSearchProvider:
+    """Provider boundary for future official-site search integration.
+
+    The first milestone keeps this provider non-networked unless a search
+    backend is added. Page parsing is implemented and tested so search results
+    can be safely mapped into candidates later.
+    """
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    async def lookup(self, request: ProductLookupRequest) -> list[ProductCandidate]:
+        if not self.settings.official_search_enabled:
+            return []
+        return []
+
+    def preferred_domains_for_brand(self, brand: str) -> tuple[str, ...]:
+        return OFFICIAL_BRAND_DOMAINS.get(brand.strip().lower(), ())
+
+    def candidate_from_page(
+        self, url: str, html: str, request: ProductLookupRequest
+    ) -> ProductCandidate:
+        metadata = parse_page_metadata(html)
+        domain = urlparse(url).netloc.removeprefix("www.")
+        preferred_domains = self.preferred_domains_for_brand(request.brand)
+        reasons = ["structured metadata"] if metadata.product_name else ["page metadata"]
+        if any(domain.endswith(official) for official in preferred_domains):
+            reasons.append("official domain")
+        if request.brand and request.brand.lower() in (
+            metadata.brand or request.brand
+        ).lower():
+            reasons.append("brand match")
+        if request.query and _has_overlap(request.query, metadata.title):
+            reasons.append("name match")
+
+        name = metadata.product_name or metadata.title
+        return ProductCandidate(
+            id=stable_id(ProductSource.official_website.value, url, name),
+            localName="",
+            englishName=name,
+            brand=metadata.brand or request.brand,
+            category=guess_category(name, request.query),
+            imageURL=metadata.image_url or None,
+            productPageURL=metadata.canonical_url or url,
+            barcode=request.barcode,
+            source=ProductSource.official_website,
+            confidence=Confidence.low,
+            matchReasons=reasons,
+        )
+
+
+def _has_overlap(left: str, right: str) -> bool:
+    left_tokens = {token for token in left.lower().split() if len(token) > 2}
+    right_tokens = {token for token in right.lower().split() if len(token) > 2}
+    return bool(left_tokens & right_tokens)
+
