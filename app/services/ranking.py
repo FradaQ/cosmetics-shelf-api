@@ -32,12 +32,18 @@ class RankingService:
         reasons = set(candidate.matchReasons)
         if candidate.source == ProductSource.official_website:
             score += 25
+        elif candidate.source == ProductSource.authorized_retailer:
+            score += 18
         elif candidate.source == ProductSource.open_beauty_facts:
             score += 15
         elif candidate.source == ProductSource.user_provided:
             score += 20
         if "official domain" in reasons:
             score += 30
+        if "authorized retailer fallback" in reasons:
+            score += 20
+        if "authorized retailer domain" in reasons:
+            score += 15
         if "user supplied product page" in reasons:
             score += 15
         if "user supplied official image" in reasons:

@@ -26,8 +26,18 @@ class ProductLookupService:
             for candidate in all_candidates
             if candidate.source == ProductSource.official_website
         ]
+        if official_candidates or not request.allowRetailerFallback:
+            return ProductLookupResponse(
+                candidates=self.ranking_service.rank(official_candidates, request)
+            )
+
+        retailer_candidates = [
+            candidate
+            for candidate in all_candidates
+            if candidate.source == ProductSource.authorized_retailer
+        ]
         return ProductLookupResponse(
-            candidates=self.ranking_service.rank(official_candidates, request)
+            candidates=self.ranking_service.rank(retailer_candidates, request)
         )
 
 

@@ -8,7 +8,7 @@ from app.models import (
     ProductLookupRequest,
     ProductLookupResponse,
 )
-from app.providers import BatchRuleProvider, OfficialSearchProvider
+from app.providers import BatchRuleProvider, OfficialSearchProvider, SephoraRetailerProvider
 from app.services.product_lookup import ProductLookupProviderError, ProductLookupService
 from app.services.ranking import RankingService
 
@@ -22,6 +22,7 @@ def get_product_lookup_service(
     return ProductLookupService(
         providers=[
             OfficialSearchProvider(settings=settings),
+            SephoraRetailerProvider(settings=settings),
         ],
         ranking_service=RankingService(),
     )

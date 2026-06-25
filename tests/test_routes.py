@@ -10,6 +10,7 @@ from app.models import (
 )
 from app.routes import get_product_lookup_service
 from app.providers.official_search import OfficialSearchProvider
+from app.providers.sephora import SephoraRetailerProvider
 
 
 class FakeProductLookupService:
@@ -83,8 +84,9 @@ def test_product_lookup_accepts_official_url_without_query_or_barcode() -> None:
 def test_default_product_lookup_service_uses_only_official_provider() -> None:
     service = get_product_lookup_service()
 
-    assert len(service.providers) == 1
+    assert len(service.providers) == 2
     assert isinstance(service.providers[0], OfficialSearchProvider)
+    assert isinstance(service.providers[1], SephoraRetailerProvider)
 
 
 def test_product_lookup_requires_query_or_barcode() -> None:

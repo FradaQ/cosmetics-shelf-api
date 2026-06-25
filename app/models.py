@@ -7,6 +7,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field, model_validator
 class ProductSource(str, Enum):
     open_beauty_facts = "openBeautyFacts"
     official_website = "officialWebsite"
+    authorized_retailer = "authorizedRetailer"
     user_provided = "userProvided"
 
 
@@ -38,6 +39,12 @@ class ProductLookupRequest(BaseModel):
     officialProductPageURL: Optional[AnyHttpUrl] = None
     officialImageURL: Optional[AnyHttpUrl] = None
     officialName: str = Field(default="", max_length=200)
+    allowRetailerFallback: bool = False
+    preferredRetailers: List[str] = Field(default_factory=list, max_length=5)
+    retailerProductPageURL: Optional[AnyHttpUrl] = None
+    retailerImageURL: Optional[AnyHttpUrl] = None
+    retailerName: str = Field(default="", max_length=100)
+    retailerProductName: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
     def query_or_barcode_required(self) -> "ProductLookupRequest":
@@ -46,9 +53,11 @@ class ProductLookupRequest(BaseModel):
             and not self.barcode.strip()
             and not self.officialProductPageURL
             and not self.officialImageURL
+            and not self.retailerProductPageURL
+            and not self.retailerImageURL
         ):
             raise ValueError(
-                "Either query, barcode, officialProductPageURL, or officialImageURL is required."
+                "Either query, barcode, officialProductPageURL, officialImageURL, retailerProductPageURL, or retailerImageURL is required."
             )
         return self
 

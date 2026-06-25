@@ -61,3 +61,53 @@ async def test_product_lookup_service_returns_only_official_website_candidates()
 
     assert [candidate.id for candidate in response.candidates] == ["official"]
 
+
+class RetailerOnlyProvider:
+    async def lookup(self, request: ProductLookupRequest) -> list[ProductCandidate]:
+        return [
+            ProductCandidate(
+                id="retailer",
+                englishName="Advanced Genifique Face Serum",
+                brand="Lancome",
+                imageURL="https://www.sephora.com/productimages/genifique.jpg",
+                productPageURL="https://www.sephora.com/product/advanced-genifique-face-serum",
+                source=ProductSource.authorized_retailer,
+                confidence=Confidence.medium,
+                matchReasons=[
+                    "authorized retailer fallback",
+                    "authorized retailer domain",
+                    "brand match",
+                    "name match",
+                ],
+            )
+        ]
+
+
+async def test_product_lookup_service_uses_retailer_fallback_when_official_empty() -> None:
+    service = ProductLookupService(
+        providers=[RetailerOnlyProvider()],
+        ranking_service=RankingService(),
+    )
+
+    response = await service.lookup(
+        ProductLookupRequest(
+            query="genifique serum",
+            brand="Lancome",
+            allowRetailerFallback=True,
+        )
+    )
+
+    assert [candidate.id for candidate in response.candidates] == ["retailer"]
+
+
+async def test_product_lookup_service_omits_retailer_when_fallback_disabled() -> None:
+    service = ProductLookupService(
+        providers=[RetailerOnlyProvider()],
+        ranking_service=RankingService(),
+    )
+
+    response = await service.lookup(
+        ProductLookupRequest(query="genifique serum", brand="Lancome")
+    )
+
+    assert response.candidates == []

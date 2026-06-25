@@ -38,11 +38,26 @@ Returns ranked official candidates. The default lookup path now returns only ver
   "preferredLanguage": "en",
   "officialProductPageURL": "",
   "officialImageURL": "",
-  "officialName": ""
+  "officialName": "",
+  "allowRetailerFallback": false,
+  "preferredRetailers": []
 }
 ```
 
 If the iOS app already has a user-maintained official product URL or official image URL, send them in `officialProductPageURL` and `officialImageURL`. The API accepts the candidate only when the product page domain matches the known official brand-domain list. If the domain is not verified, it is filtered out of the default product lookup response.
+
+For brands whose official sites block server-side lookup, the client can opt into authorized retailer fallback:
+
+```json
+{
+  "query": "Lancome Genifique serum",
+  "brand": "Lancome",
+  "allowRetailerFallback": true,
+  "preferredRetailers": ["sephora"]
+}
+```
+
+Retailer fallback candidates use `source: "authorizedRetailer"`, not `officialWebsite`. The service returns them only when no verified official candidate is available.
 
 ### `POST /v1/batch-lookup`
 
@@ -85,6 +100,7 @@ Open `http://127.0.0.1:8000/docs` for the generated API explorer.
 ## Provider Architecture
 
 - `OfficialSearchProvider`: uses user-supplied official product URLs/images immediately, verifies known official brand domains, and can query lightweight official-site product suggestion endpoints for known brands.
+- `SephoraRetailerProvider`: optional authorized-retailer fallback. It is only used when `allowRetailerFallback` is true and official lookup has no verified result.
 - `OpenBeautyFactsProvider`: available in the codebase for future fallback experiments, but it is not part of the default `/v1/product-lookup` provider chain because product lookup currently returns official information and official images only.
 - `BatchRuleProvider`: conservative rule engine skeleton. It returns no result unless a trusted brand-specific parser is configured.
 - `RankingService`: de-duplicates official candidates, scores source/name/brand/barcode/page/image signals, and assigns confidence.
