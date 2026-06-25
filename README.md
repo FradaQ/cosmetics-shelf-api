@@ -89,6 +89,23 @@ Open `http://127.0.0.1:8000/docs` for the generated API explorer.
 - `BatchRuleProvider`: conservative rule engine skeleton. It returns no result unless a trusted brand-specific parser is configured.
 - `RankingService`: de-duplicates official candidates, scores source/name/brand/barcode/page/image signals, and assigns confidence.
 
+## Official Brand Coverage
+
+Current official-domain coverage:
+
+| Brand | Domains | Automatic lookup |
+| --- | --- | --- |
+| Lancome / Lancôme | `lancome-usa.com`, `lancome.com` | Manual official URL/image only. The site currently returns a browser challenge to server-side lookup requests. |
+| Estée Lauder | `esteelauder.com` | Manual official URL/image only. |
+| Clinique | `clinique.com` | Manual official URL/image only. |
+| Kiehl's | `kiehls.com` | Manual official URL/image only. |
+| The Ordinary | `theordinary.com` | Manual official URL/image only. |
+| CeraVe | `cerave.com` | Manual official URL/image only. |
+| La Mer | `cremedelamer.com`, `lamer.com` | Manual official URL/image only. |
+| Tatcha | `tatcha.com` | Automatic official product lookup via site product suggestions. |
+| Mediheal | `mediheal.com`, `medihealus.com`, `mediheal.co.kr` | Automatic official product lookup on `mediheal.com`; Korean domain is accepted for official URL verification. |
+| Whipped | `whipped.co.kr` | Manual official URL/image only. |
+
 ## Metadata Parsing
 
 Official product pages should be parsed in this order:

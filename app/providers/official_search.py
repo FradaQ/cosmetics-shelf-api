@@ -1,4 +1,5 @@
-from typing import Optional
+from dataclasses import dataclass
+from typing import Literal, Optional
 from urllib.parse import quote, urljoin, urlparse
 
 import httpx
@@ -11,19 +12,78 @@ from app.services.category import guess_category
 from app.services.ids import stable_id
 
 
-OFFICIAL_BRAND_DOMAINS: dict[str, tuple[str, ...]] = {
-    "lancome": ("lancome-usa.com", "lancome.com"),
-    "lancôme": ("lancome-usa.com", "lancome.com"),
-    "estee lauder": ("esteelauder.com",),
-    "estée lauder": ("esteelauder.com",),
-    "clinique": ("clinique.com",),
-    "kiehls": ("kiehls.com",),
-    "kiehl's": ("kiehls.com",),
-    "the ordinary": ("theordinary.com",),
-    "cerave": ("cerave.com",),
-    "lamer": ("cremedelamer.com", "lamer.com"),
-    "la mer": ("cremedelamer.com", "lamer.com"),
-    "tatcha": ("tatcha.com",),
+SearchStrategy = Literal["manualOnly", "shopify"]
+
+
+@dataclass(frozen=True)
+class BrandOfficialSite:
+    display_name: str
+    domains: tuple[str, ...]
+    search_strategy: SearchStrategy = "manualOnly"
+    search_domains: tuple[str, ...] = ()
+
+
+OFFICIAL_BRAND_SITES: dict[str, BrandOfficialSite] = {
+    "lancome": BrandOfficialSite(
+        display_name="Lancome",
+        domains=("lancome-usa.com", "lancome.com"),
+    ),
+    "lancôme": BrandOfficialSite(
+        display_name="Lancôme",
+        domains=("lancome-usa.com", "lancome.com"),
+    ),
+    "estee lauder": BrandOfficialSite(
+        display_name="Estée Lauder",
+        domains=("esteelauder.com",),
+    ),
+    "estée lauder": BrandOfficialSite(
+        display_name="Estée Lauder",
+        domains=("esteelauder.com",),
+    ),
+    "clinique": BrandOfficialSite(
+        display_name="Clinique",
+        domains=("clinique.com",),
+    ),
+    "kiehls": BrandOfficialSite(
+        display_name="Kiehl's",
+        domains=("kiehls.com",),
+    ),
+    "kiehl's": BrandOfficialSite(
+        display_name="Kiehl's",
+        domains=("kiehls.com",),
+    ),
+    "the ordinary": BrandOfficialSite(
+        display_name="The Ordinary",
+        domains=("theordinary.com",),
+    ),
+    "cerave": BrandOfficialSite(
+        display_name="CeraVe",
+        domains=("cerave.com",),
+    ),
+    "lamer": BrandOfficialSite(
+        display_name="La Mer",
+        domains=("cremedelamer.com", "lamer.com"),
+    ),
+    "la mer": BrandOfficialSite(
+        display_name="La Mer",
+        domains=("cremedelamer.com", "lamer.com"),
+    ),
+    "tatcha": BrandOfficialSite(
+        display_name="Tatcha",
+        domains=("tatcha.com",),
+        search_strategy="shopify",
+        search_domains=("tatcha.com",),
+    ),
+    "mediheal": BrandOfficialSite(
+        display_name="Mediheal",
+        domains=("mediheal.com", "medihealus.com", "mediheal.co.kr"),
+        search_strategy="shopify",
+        search_domains=("mediheal.com",),
+    ),
+    "whipped": BrandOfficialSite(
+        display_name="Whipped",
+        domains=("whipped.co.kr", "www.whipped.co.kr"),
+    ),
 }
 
 
@@ -49,10 +109,14 @@ class OfficialSearchProvider:
         return candidates
 
     def preferred_domains_for_brand(self, brand: str) -> tuple[str, ...]:
+        brand_site = self.official_site_for_brand(brand)
+        return brand_site.domains if brand_site else ()
+
+    def official_site_for_brand(self, brand: str) -> Optional[BrandOfficialSite]:
         normalized = normalize_brand(brand)
-        if normalized in OFFICIAL_BRAND_DOMAINS:
-            return OFFICIAL_BRAND_DOMAINS[normalized]
-        return OFFICIAL_BRAND_DOMAINS.get(brand.strip().lower(), ())
+        if normalized in OFFICIAL_BRAND_SITES:
+            return OFFICIAL_BRAND_SITES[normalized]
+        return OFFICIAL_BRAND_SITES.get(brand.strip().lower())
 
     def candidate_from_user_supplied(
         self, request: ProductLookupRequest
@@ -100,8 +164,8 @@ class OfficialSearchProvider:
     async def _lookup_known_official_sites(
         self, request: ProductLookupRequest
     ) -> list[ProductCandidate]:
-        domains = self.preferred_domains_for_brand(request.brand)
-        if not domains:
+        brand_site = self.official_site_for_brand(request.brand)
+        if not brand_site:
             return []
 
         search_query = self._official_search_query(request)
@@ -109,8 +173,12 @@ class OfficialSearchProvider:
             return []
 
         candidates: list[ProductCandidate] = []
-        for domain in domains[:2]:
-            candidates.extend(await self._lookup_shopify_suggest(domain, search_query, request))
+        if brand_site.search_strategy == "shopify":
+            search_domains = brand_site.search_domains or brand_site.domains[:1]
+            for domain in search_domains:
+                candidates.extend(
+                    await self._lookup_shopify_suggest(domain, search_query, request)
+                )
         return candidates
 
     async def _lookup_shopify_suggest(

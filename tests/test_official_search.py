@@ -68,6 +68,9 @@ def test_known_official_domain_mapping() -> None:
     assert "lancome-usa.com" in provider.preferred_domains_for_brand("Lancome")
     assert "cremedelamer.com" in provider.preferred_domains_for_brand("La Mer")
     assert "tatcha.com" in provider.preferred_domains_for_brand("Tatcha")
+    assert "mediheal.com" in provider.preferred_domains_for_brand("Mediheal")
+    assert "mediheal.co.kr" in provider.preferred_domains_for_brand("Mediheal")
+    assert "whipped.co.kr" in provider.preferred_domains_for_brand("Whipped")
     assert "theordinary.com" in provider.preferred_domains_for_brand("The Ordinary")
 
 
@@ -143,3 +146,53 @@ async def test_official_provider_maps_shopify_suggest_products() -> None:
     )
     assert "official site search" in candidates[0].matchReasons
     assert "official image" in candidates[0].matchReasons
+
+
+async def test_mediheal_uses_shopify_strategy() -> None:
+    provider = OfficialSearchProvider(Settings())
+    calls = []
+
+    async def fake_shopify_suggest(domain, search_query, request):
+        calls.append((domain, search_query))
+        return []
+
+    provider._lookup_shopify_suggest = fake_shopify_suggest
+
+    await provider.lookup(ProductLookupRequest(query="teatree mask", brand="Mediheal"))
+
+    assert calls == [("mediheal.com", "teatree mask")]
+
+
+async def test_lancome_manual_only_does_not_auto_search() -> None:
+    provider = OfficialSearchProvider(Settings())
+    calls = []
+
+    async def fake_shopify_suggest(domain, search_query, request):
+        calls.append((domain, search_query))
+        return []
+
+    provider._lookup_shopify_suggest = fake_shopify_suggest
+
+    candidates = await provider.lookup(
+        ProductLookupRequest(query="genifique serum", brand="Lancome")
+    )
+
+    assert candidates == []
+    assert calls == []
+
+
+async def test_whipped_user_supplied_official_domain_is_verified() -> None:
+    provider = OfficialSearchProvider(Settings())
+    request = ProductLookupRequest(
+        query="vegan pack cleanser",
+        brand="Whipped",
+        officialProductPageURL="https://whipped.co.kr/product/detail.html?product_no=123",
+        officialImageURL="https://whipped.co.kr/web/product/big/product.jpg",
+        officialName="Vegan Pack Cleanser",
+    )
+
+    candidates = await provider.lookup(request)
+
+    assert len(candidates) == 1
+    assert candidates[0].source == "officialWebsite"
+    assert "official domain" in candidates[0].matchReasons
