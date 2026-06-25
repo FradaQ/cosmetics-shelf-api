@@ -27,7 +27,7 @@ Returns service status and version.
 
 ### `POST /v1/product-lookup`
 
-Returns ranked candidates. The first milestone uses Open Beauty Facts and a stubbed official-search provider boundary.
+Returns ranked official candidates. The default lookup path now returns only verified `officialWebsite` candidates; community or third-party catalog results are not returned.
 
 ```json
 {
@@ -42,7 +42,7 @@ Returns ranked candidates. The first milestone uses Open Beauty Facts and a stub
 }
 ```
 
-If the iOS app already has a user-maintained official product URL or official image URL, send them in `officialProductPageURL` and `officialImageURL`. The API will rank verified official-domain candidates above Open Beauty Facts results. If the domain is not in the known official brand-domain list, the candidate is returned as `source: "userProvided"` with `official domain not verified` in `matchReasons`.
+If the iOS app already has a user-maintained official product URL or official image URL, send them in `officialProductPageURL` and `officialImageURL`. The API accepts the candidate only when the product page domain matches the known official brand-domain list. If the domain is not verified, it is filtered out of the default product lookup response.
 
 ### `POST /v1/batch-lookup`
 
@@ -84,10 +84,10 @@ Open `http://127.0.0.1:8000/docs` for the generated API explorer.
 
 ## Provider Architecture
 
-- `OpenBeautyFactsProvider`: searches Open Beauty Facts by text or barcode.
-- `OfficialSearchProvider`: uses user-supplied official product URLs/images immediately, verifies known official brand domains, and contains the future official-site search boundary.
+- `OfficialSearchProvider`: uses user-supplied official product URLs/images immediately, verifies known official brand domains, and can query lightweight official-site product suggestion endpoints for known brands.
+- `OpenBeautyFactsProvider`: available in the codebase for future fallback experiments, but it is not part of the default `/v1/product-lookup` provider chain because product lookup currently returns official information and official images only.
 - `BatchRuleProvider`: conservative rule engine skeleton. It returns no result unless a trusted brand-specific parser is configured.
-- `RankingService`: de-duplicates candidates, scores source/name/brand/barcode/page/image signals, and assigns confidence.
+- `RankingService`: de-duplicates official candidates, scores source/name/brand/barcode/page/image signals, and assigns confidence.
 
 ## Metadata Parsing
 

@@ -1,6 +1,6 @@
 import httpx
 
-from app.models import ProductLookupRequest, ProductLookupResponse
+from app.models import ProductLookupRequest, ProductLookupResponse, ProductSource
 from app.providers.base import ProductLookupProvider
 from app.services.ranking import RankingService
 
@@ -21,11 +21,15 @@ class ProductLookupService:
                 all_candidates.extend(await provider.lookup(request))
             except (httpx.TimeoutException, httpx.HTTPError) as exc:
                 raise ProductLookupProviderError(str(exc)) from exc
+        official_candidates = [
+            candidate
+            for candidate in all_candidates
+            if candidate.source == ProductSource.official_website
+        ]
         return ProductLookupResponse(
-            candidates=self.ranking_service.rank(all_candidates, request)
+            candidates=self.ranking_service.rank(official_candidates, request)
         )
 
 
 class ProductLookupProviderError(RuntimeError):
     pass
-

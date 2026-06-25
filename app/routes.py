@@ -8,7 +8,7 @@ from app.models import (
     ProductLookupRequest,
     ProductLookupResponse,
 )
-from app.providers import BatchRuleProvider, OfficialSearchProvider, OpenBeautyFactsProvider
+from app.providers import BatchRuleProvider, OfficialSearchProvider
 from app.services.product_lookup import ProductLookupProviderError, ProductLookupService
 from app.services.ranking import RankingService
 
@@ -21,7 +21,6 @@ def get_product_lookup_service(
 ) -> ProductLookupService:
     return ProductLookupService(
         providers=[
-            OpenBeautyFactsProvider(settings=settings),
             OfficialSearchProvider(settings=settings),
         ],
         ranking_service=RankingService(),
@@ -60,4 +59,3 @@ def batch_lookup(
     provider: BatchRuleProvider = Depends(get_batch_rule_provider),
 ) -> BatchLookupResponse:
     return provider.lookup(request)
-

@@ -67,6 +67,7 @@ def test_known_official_domain_mapping() -> None:
 
     assert "lancome-usa.com" in provider.preferred_domains_for_brand("Lancome")
     assert "cremedelamer.com" in provider.preferred_domains_for_brand("La Mer")
+    assert "tatcha.com" in provider.preferred_domains_for_brand("Tatcha")
     assert "theordinary.com" in provider.preferred_domains_for_brand("The Ordinary")
 
 
@@ -106,3 +107,39 @@ async def test_official_provider_marks_user_supplied_unknown_domain_as_unverifie
     assert candidates[0].source == "userProvided"
     assert candidates[0].confidence == "medium"
     assert "official domain not verified" in candidates[0].matchReasons
+
+
+async def test_official_provider_maps_shopify_suggest_products() -> None:
+    provider = OfficialSearchProvider(Settings())
+
+    async def fake_shopify_suggest(domain, search_query, request):
+        assert domain == "tatcha.com"
+        assert search_query == "cleanser"
+        return [
+            provider._candidate_from_shopify_product(
+                domain,
+                {
+                    "title": "The Rice Wash",
+                    "url": "/products/rice-wash-soft-cream-cleanser?_pos=1",
+                    "featured_image": {
+                        "url": "https://cdn.shopify.com/product.jpg",
+                    },
+                },
+                request,
+            )
+        ]
+
+    provider._lookup_shopify_suggest = fake_shopify_suggest
+    request = ProductLookupRequest(query="tatcha cleanser", brand="Tatcha")
+
+    candidates = await provider.lookup(request)
+
+    assert len(candidates) == 1
+    assert candidates[0].source == "officialWebsite"
+    assert candidates[0].englishName == "The Rice Wash"
+    assert str(candidates[0].imageURL) == "https://cdn.shopify.com/product.jpg"
+    assert str(candidates[0].productPageURL) == (
+        "https://tatcha.com/products/rice-wash-soft-cream-cleanser"
+    )
+    assert "official site search" in candidates[0].matchReasons
+    assert "official image" in candidates[0].matchReasons
