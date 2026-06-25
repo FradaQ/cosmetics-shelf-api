@@ -66,5 +66,43 @@ def test_known_official_domain_mapping() -> None:
     provider = OfficialSearchProvider(Settings())
 
     assert "lancome-usa.com" in provider.preferred_domains_for_brand("Lancome")
+    assert "cremedelamer.com" in provider.preferred_domains_for_brand("La Mer")
     assert "theordinary.com" in provider.preferred_domains_for_brand("The Ordinary")
 
+
+async def test_official_provider_uses_user_supplied_known_official_product_page() -> None:
+    provider = OfficialSearchProvider(Settings())
+    request = ProductLookupRequest(
+        query="The Concentrate",
+        brand="La Mer",
+        officialProductPageURL="https://www.cremedelamer.com/product/the-concentrate",
+        officialImageURL="https://www.cremedelamer.com/media/the-concentrate.jpg",
+        officialName="The Concentrate",
+    )
+
+    candidates = await provider.lookup(request)
+
+    assert len(candidates) == 1
+    assert candidates[0].source == "officialWebsite"
+    assert candidates[0].confidence == "high"
+    assert candidates[0].brand == "La Mer"
+    assert candidates[0].englishName == "The Concentrate"
+    assert "official domain" in candidates[0].matchReasons
+    assert "user supplied official image" in candidates[0].matchReasons
+
+
+async def test_official_provider_marks_user_supplied_unknown_domain_as_unverified() -> None:
+    provider = OfficialSearchProvider(Settings())
+    request = ProductLookupRequest(
+        query="Mystery Serum",
+        brand="Lancome",
+        officialProductPageURL="https://example.com/mystery-serum",
+        officialImageURL="https://example.com/mystery-serum.jpg",
+    )
+
+    candidates = await provider.lookup(request)
+
+    assert len(candidates) == 1
+    assert candidates[0].source == "userProvided"
+    assert candidates[0].confidence == "medium"
+    assert "official domain not verified" in candidates[0].matchReasons

@@ -84,3 +84,37 @@ def test_ranking_filters_non_matching_brands_when_brand_is_requested() -> None:
     ranked = RankingService().rank([other_candidate, lancome_candidate], request)
 
     assert [candidate.id for candidate in ranked] == ["lancome"]
+
+
+def test_ranking_prefers_user_supplied_official_domain_over_open_beauty_facts() -> None:
+    request = ProductLookupRequest(query="The Concentrate", brand="La Mer")
+    open_candidate = ProductCandidate(
+        id="open",
+        englishName="Concentrate",
+        brand="La Mer",
+        imageURL="https://images.openbeautyfacts.org/product.jpg",
+        source=ProductSource.open_beauty_facts,
+        confidence=Confidence.low,
+        matchReasons=["brand match", "name match"],
+    )
+    user_official_candidate = ProductCandidate(
+        id="official-user",
+        englishName="The Concentrate",
+        brand="La Mer",
+        imageURL="https://www.cremedelamer.com/media/product.jpg",
+        productPageURL="https://www.cremedelamer.com/product/the-concentrate",
+        source=ProductSource.official_website,
+        confidence=Confidence.low,
+        matchReasons=[
+            "user supplied product page",
+            "user supplied official image",
+            "official domain",
+            "brand match",
+            "name match",
+        ],
+    )
+
+    ranked = RankingService().rank([open_candidate, user_official_candidate], request)
+
+    assert ranked[0].id == "official-user"
+    assert ranked[0].confidence == Confidence.high

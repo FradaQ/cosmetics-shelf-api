@@ -1,11 +1,10 @@
-import re
-import unicodedata
 from typing import Any, Optional
 
 import httpx
 
 from app.config import Settings
 from app.models import Confidence, ProductCandidate, ProductLookupRequest, ProductSource
+from app.services.brand import brand_matches
 from app.services.category import guess_category
 from app.services.ids import stable_id
 
@@ -80,7 +79,7 @@ class OpenBeautyFactsProvider:
         barcode = str(product.get("code") or "").strip()
         category_text = " ".join(product.get("categories_tags") or [])
         reasons = ["Open Beauty Facts result"]
-        if request.brand and _brand_matches(request.brand, brand):
+        if request.brand and brand_matches(request.brand, brand):
             reasons.append("brand match")
         if request.query and _has_name_overlap(request.query, english_name or local_name):
             reasons.append("name match")
@@ -110,19 +109,3 @@ def _has_name_overlap(query: str, candidate: str) -> bool:
     candidate_tokens = {token for token in candidate.lower().split() if len(token) > 2}
     return bool(query_tokens & candidate_tokens)
 
-
-def _brand_matches(requested_brand: str, candidate_brand: str) -> bool:
-    requested = _normalize_brand(requested_brand)
-    candidate = _normalize_brand(candidate_brand)
-    if not requested or not candidate:
-        return False
-    return requested == candidate or requested in candidate or candidate in requested
-
-
-def _normalize_brand(value: str) -> str:
-    without_accents = "".join(
-        character
-        for character in unicodedata.normalize("NFKD", value)
-        if not unicodedata.combining(character)
-    )
-    return re.sub(r"[^a-z0-9]+", "", without_accents.lower())

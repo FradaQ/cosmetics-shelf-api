@@ -7,6 +7,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field, model_validator
 class ProductSource(str, Enum):
     open_beauty_facts = "openBeautyFacts"
     official_website = "officialWebsite"
+    user_provided = "userProvided"
 
 
 class Confidence(str, Enum):
@@ -34,11 +35,21 @@ class ProductLookupRequest(BaseModel):
     barcode: str = Field(default="", max_length=64)
     locale: str = Field(default="en-US", min_length=2, max_length=16)
     preferredLanguage: str = Field(default="en", min_length=2, max_length=8)
+    officialProductPageURL: Optional[AnyHttpUrl] = None
+    officialImageURL: Optional[AnyHttpUrl] = None
+    officialName: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
     def query_or_barcode_required(self) -> "ProductLookupRequest":
-        if not self.query.strip() and not self.barcode.strip():
-            raise ValueError("Either query or barcode is required.")
+        if (
+            not self.query.strip()
+            and not self.barcode.strip()
+            and not self.officialProductPageURL
+            and not self.officialImageURL
+        ):
+            raise ValueError(
+                "Either query, barcode, officialProductPageURL, or officialImageURL is required."
+            )
         return self
 
 
@@ -74,4 +85,3 @@ class BatchLookupResponse(BaseModel):
     source: str
     sourceDescription: str
     message: Optional[str] = None
-

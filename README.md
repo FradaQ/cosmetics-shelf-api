@@ -35,9 +35,14 @@ Returns ranked candidates. The first milestone uses Open Beauty Facts and a stub
   "brand": "Lancome",
   "barcode": "",
   "locale": "en-US",
-  "preferredLanguage": "en"
+  "preferredLanguage": "en",
+  "officialProductPageURL": "",
+  "officialImageURL": "",
+  "officialName": ""
 }
 ```
+
+If the iOS app already has a user-maintained official product URL or official image URL, send them in `officialProductPageURL` and `officialImageURL`. The API will rank verified official-domain candidates above Open Beauty Facts results. If the domain is not in the known official brand-domain list, the candidate is returned as `source: "userProvided"` with `official domain not verified` in `matchReasons`.
 
 ### `POST /v1/batch-lookup`
 
@@ -80,7 +85,7 @@ Open `http://127.0.0.1:8000/docs` for the generated API explorer.
 ## Provider Architecture
 
 - `OpenBeautyFactsProvider`: searches Open Beauty Facts by text or barcode.
-- `OfficialSearchProvider`: currently a stubbed provider boundary with official-domain preference and product page metadata mapping.
+- `OfficialSearchProvider`: uses user-supplied official product URLs/images immediately, verifies known official brand domains, and contains the future official-site search boundary.
 - `BatchRuleProvider`: conservative rule engine skeleton. It returns no result unless a trusted brand-specific parser is configured.
 - `RankingService`: de-duplicates candidates, scores source/name/brand/barcode/page/image signals, and assigns confidence.
 

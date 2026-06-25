@@ -1,7 +1,5 @@
-import re
-import unicodedata
-
 from app.models import Confidence, ProductCandidate, ProductLookupRequest, ProductSource
+from app.services.brand import brand_matches
 
 
 class RankingService:
@@ -36,8 +34,14 @@ class RankingService:
             score += 25
         elif candidate.source == ProductSource.open_beauty_facts:
             score += 15
+        elif candidate.source == ProductSource.user_provided:
+            score += 20
         if "official domain" in reasons:
             score += 30
+        if "user supplied product page" in reasons:
+            score += 15
+        if "user supplied official image" in reasons:
+            score += 10
         if "barcode match" in reasons:
             score += 35
         if "brand match" in reasons:
@@ -49,7 +53,7 @@ class RankingService:
         if candidate.productPageURL:
             score += 5
         if request.brand and candidate.brand:
-            if _brand_matches(request.brand, candidate.brand):
+            if brand_matches(request.brand, candidate.brand):
                 score += 10
         return score
 
@@ -62,7 +66,7 @@ class RankingService:
         return [
             candidate
             for candidate in candidates
-            if candidate.brand and _brand_matches(requested_brand, candidate.brand)
+            if candidate.brand and brand_matches(requested_brand, candidate.brand)
         ]
 
     def _confidence(self, score: int) -> Confidence:
@@ -78,20 +82,3 @@ class RankingService:
         if candidate.productPageURL:
             return f"url:{candidate.productPageURL}"
         return f"name:{candidate.brand.lower()}:{candidate.englishName.lower()}"
-
-
-def _brand_matches(requested_brand: str, candidate_brand: str) -> bool:
-    requested = _normalize_brand(requested_brand)
-    candidate = _normalize_brand(candidate_brand)
-    if not requested or not candidate:
-        return False
-    return requested == candidate or requested in candidate or candidate in requested
-
-
-def _normalize_brand(value: str) -> str:
-    without_accents = "".join(
-        character
-        for character in unicodedata.normalize("NFKD", value)
-        if not unicodedata.combining(character)
-    )
-    return re.sub(r"[^a-z0-9]+", "", without_accents.lower())

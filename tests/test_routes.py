@@ -58,6 +58,27 @@ def test_product_lookup_endpoint_returns_candidates() -> None:
     assert response.json()["candidates"][0]["confidence"] == "high"
 
 
+def test_product_lookup_accepts_official_url_without_query_or_barcode() -> None:
+    app = create_app()
+    app.dependency_overrides[get_product_lookup_service] = lambda: FakeProductLookupService()
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/product-lookup",
+        json={
+            "query": "",
+            "brand": "La Mer",
+            "barcode": "",
+            "locale": "en-US",
+            "preferredLanguage": "en",
+            "officialProductPageURL": "https://www.cremedelamer.com/product/the-concentrate",
+            "officialImageURL": "https://www.cremedelamer.com/media/product.jpg",
+        },
+    )
+
+    assert response.status_code == 200
+
+
 def test_product_lookup_requires_query_or_barcode() -> None:
     client = TestClient(create_app())
 
@@ -90,4 +111,3 @@ def test_batch_lookup_unsupported_endpoint() -> None:
     assert response.status_code == 200
     assert response.json()["result"] == "no_result"
     assert response.json()["source"] == "unsupported"
-
