@@ -33,7 +33,7 @@ class BatchRuleProvider:
                     "No reliable brand-specific batch-code rule is configured."
                 ),
                 message="Use manual manufacture or expiry date entry in the app.",
-                suggestedExternalLookup=_checkfresh_lookup(),
+                suggestedExternalLookup=_checkfresh_lookup(brand_key),
             )
 
         manufacture_date = rule.parser(request.batchCode.strip().upper())
@@ -43,7 +43,7 @@ class BatchRuleProvider:
                 source="localRule",
                 sourceDescription=rule.description,
                 message="The batch code did not match this brand rule.",
-                suggestedExternalLookup=_checkfresh_lookup(),
+                suggestedExternalLookup=_checkfresh_lookup(brand_key),
             )
 
         expiry_date = _add_months(manufacture_date, rule.shelf_life_months)
@@ -74,10 +74,21 @@ def _days_in_month(year: int, month: int) -> int:
     return 31
 
 
-def _checkfresh_lookup() -> SuggestedExternalLookup:
+_CHECKFRESH_BRAND_PATHS = {
+    "tatcha": "tatcha.html",
+}
+
+
+def _checkfresh_lookup(brand_key: str) -> SuggestedExternalLookup:
+    brand_path = _CHECKFRESH_BRAND_PATHS.get(brand_key)
+    url = (
+        f"https://www.checkfresh.com/{brand_path}"
+        if brand_path
+        else "https://www.checkfresh.com/"
+    )
     return SuggestedExternalLookup(
         name="CheckFresh",
-        url="https://www.checkfresh.com/",
+        url=url,
         note=(
             "External informational lookup. Verify the result before saving dates."
         ),

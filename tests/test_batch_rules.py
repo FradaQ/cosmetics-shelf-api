@@ -25,6 +25,29 @@ def test_unsupported_batch_code_returns_no_result() -> None:
     assert str(response.suggestedExternalLookup.url) == "https://www.checkfresh.com/"
 
 
+def test_unsupported_tatcha_batch_code_returns_tatcha_checkfresh_page() -> None:
+    provider = BatchRuleProvider()
+
+    response = provider.lookup(
+        BatchLookupRequest(
+            brand="Tatcha",
+            batchCode="L234M1",
+            category=ProductCategory.skincare,
+        )
+    )
+
+    assert response.result == "no_result"
+    assert response.manufactureDate is None
+    assert response.expiryDate is None
+    assert response.source == "unsupported"
+    assert response.suggestedExternalLookup is not None
+    assert response.suggestedExternalLookup.name == "CheckFresh"
+    assert (
+        str(response.suggestedExternalLookup.url)
+        == "https://www.checkfresh.com/tatcha.html"
+    )
+
+
 def test_unmatched_supported_rule_returns_external_lookup_suggestion() -> None:
     provider = BatchRuleProvider()
     provider.rules["example"] = BatchRule(
