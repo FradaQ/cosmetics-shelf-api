@@ -71,6 +71,27 @@ Returns a batch-code result only when a reliable brand-specific local rule exist
 }
 ```
 
+Unsupported brands include an external informational lookup suggestion:
+
+```json
+{
+  "result": "no_result",
+  "manufactureDate": null,
+  "expiryDate": null,
+  "confidence": null,
+  "source": "unsupported",
+  "sourceDescription": "No reliable brand-specific batch-code rule is configured.",
+  "message": "Use manual manufacture or expiry date entry in the app.",
+  "suggestedExternalLookup": {
+    "name": "CheckFresh",
+    "url": "https://www.checkfresh.com/",
+    "note": "External informational lookup. Verify the result before saving dates."
+  }
+}
+```
+
+The service does not scrape CheckFresh or treat it as an official API. The app can open the external lookup as a user-assisted reference, then save dates only after user confirmation.
+
 ## Local Setup
 
 ```bash
@@ -140,7 +161,7 @@ The current parser is intentionally small and uses Python's standard `html.parse
 - Respect robots.txt, site terms, and provider rate limits.
 - Add caching before increasing lookup volume.
 - Log provider failures without logging full user inventory. Requests should contain only the current lookup query.
-- Treat batch-code rules as estimates unless the source is actually official.
+- Treat batch-code rules and external lookup results as estimates unless the source is actually official.
 
 ## Tests
 

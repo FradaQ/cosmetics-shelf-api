@@ -86,6 +86,12 @@ class BatchLookupRequest(BaseModel):
     category: ProductCategory = ProductCategory.unknown
 
 
+class SuggestedExternalLookup(BaseModel):
+    name: str
+    url: AnyHttpUrl
+    note: str
+
+
 class BatchLookupResponse(BaseModel):
     result: str
     manufactureDate: Optional[str] = None
@@ -94,3 +100,4 @@ class BatchLookupResponse(BaseModel):
     source: str
     sourceDescription: str
     message: Optional[str] = None
+    suggestedExternalLookup: Optional[SuggestedExternalLookup] = None

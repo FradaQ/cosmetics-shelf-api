@@ -2,7 +2,12 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Callable, Optional
 
-from app.models import BatchLookupRequest, BatchLookupResponse, Confidence
+from app.models import (
+    BatchLookupRequest,
+    BatchLookupResponse,
+    Confidence,
+    SuggestedExternalLookup,
+)
 
 
 @dataclass(frozen=True)
@@ -28,6 +33,7 @@ class BatchRuleProvider:
                     "No reliable brand-specific batch-code rule is configured."
                 ),
                 message="Use manual manufacture or expiry date entry in the app.",
+                suggestedExternalLookup=_checkfresh_lookup(),
             )
 
         manufacture_date = rule.parser(request.batchCode.strip().upper())
@@ -37,6 +43,7 @@ class BatchRuleProvider:
                 source="localRule",
                 sourceDescription=rule.description,
                 message="The batch code did not match this brand rule.",
+                suggestedExternalLookup=_checkfresh_lookup(),
             )
 
         expiry_date = _add_months(manufacture_date, rule.shelf_life_months)
@@ -66,3 +73,12 @@ def _days_in_month(year: int, month: int) -> int:
         return 30
     return 31
 
+
+def _checkfresh_lookup() -> SuggestedExternalLookup:
+    return SuggestedExternalLookup(
+        name="CheckFresh",
+        url="https://www.checkfresh.com/",
+        note=(
+            "External informational lookup. Verify the result before saving dates."
+        ),
+    )
